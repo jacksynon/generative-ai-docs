@@ -26,20 +26,27 @@ function getDailyActivitiesByDay(itinerary, day) {
   let dayFound = false;
   let lines = itinerary.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    if (line.toLowerCase().startsWith('day')) {
+    let line = lines[i].trim(); // Trimming to handle blank lines
+    if (line.toLowerCase().startsWith('**day')) {
       const dayNumberRegex = /day\s(\d+)/i;
       const dayNumberMatch = dayNumberRegex.exec(line);
-      dayNumber = parseInt(dayNumberMatch[1]);
-      if (dayNumber === day) {
-        dayFound = true;
+      if (dayNumberMatch) {
+        dayNumber = parseInt(dayNumberMatch[1]);
+        if (dayNumber === day) {
+          dayFound = true;
+        } else {
+          dayFound = false; // Ensures we don't collect activities for wrong days
+        }
       }
     } else if (dayFound) {
       if (line.startsWith('*')) {
         const removedAsterik = line.substring(1).trim();
         dayActivities.push(removedAsterik);
+      } else if (line === '') {
+        // Skip empty lines
+        continue;
       } else {
-        break;
+        break; // Stop when we encounter a non-activity line
       }
     }
   }
@@ -51,11 +58,14 @@ function getPlacesFromActivity(activity) {
   const places = [];
   let place = placeRegex.exec(activity);
   while (place) {
-    const [name, country] = place[1].split("|");
-    places.push({
-      name: name,
-      country: country,
-    });
+    const placeDetails = place[1].split('|');
+    if (placeDetails.length === 2) {
+      const [name, country] = placeDetails;
+      places.push({
+        name: name.trim(),
+        country: country.trim(),
+      });
+    }
     place = placeRegex.exec(activity);
   }
   return places;
@@ -66,7 +76,7 @@ function getDailyPlaces(dailyActivities) {
   for (let i = 0; i < dailyActivities.length; i++) {
     const activity = dailyActivities[i];
     const _places = getPlacesFromActivity(activity);
-    if (_places) {
+    if (_places.length > 0) {
       places.push(..._places);
     }
   }
@@ -78,7 +88,7 @@ function getFormatedItinerary(itinerary) {
   for (let day = 1; day <= 31; day++) {
     const dailyActivities = getDailyActivitiesByDay(itinerary, day);
     if (dailyActivities.length === 0) {
-      break;
+      break; // Stop when there are no more daily activities
     }
     const dailyPlaces = getDailyPlaces(dailyActivities);
     formattedItinerary.push({

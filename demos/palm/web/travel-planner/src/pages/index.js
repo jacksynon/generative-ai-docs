@@ -58,8 +58,6 @@ const predefinedPrompt = [
   },
 ];
 
-
-
 export default function Index() {
   const containerRef = React.useRef(null);
 
@@ -72,6 +70,8 @@ export default function Index() {
   const [messageList, setMessageList] = useState([]);
 
   const [displayMessageList, setDisplayMessageList] = useState(messageList);
+
+  const [chatHistory, setChatHistory] = useState([]);
 
   const [placeView, setPlaceView] = useState();
 
@@ -95,39 +95,52 @@ export default function Index() {
     }
   };
 
+  console.log('displayMessageList', displayMessageList);
+
   const getIntroAndItineraries = async msg => {
     const id = uuidv4();
-    const _messageList = [...messageList];
+    const _messageList = [...chatHistory];
 
     let placesFound = '';
 
-    const bard1Context = {
-      context:
-        "As a smart itinerary planner with extensive knowledge of places around the world, your task is to determine the user's travel destinations and any specific interests or preferences from their message. Create an itinerary that caters to the user's needs, making sure to name all activities, restaurants, and attractions specifically. When creating the itinerary, also consider factors such as time constraints and transportation options. Additionally, all attractions and restaurants listed in the itinerary must exist and be named specifically. During subsequent revisions, the itinerary can be modified, while keeping in mind the practicality of the itinerary. New place for each day. It's important to ensure that the number of activities per day is appropriate, and if the user doesn't specify otherwise, the default itinerary length is five days. The itinerary length should remain the same unless there is a change by the user's message.",
+    const systemInstruction = {
+      text: "As a smart itinerary planner with extensive knowledge of places around the world, your task is to determine the user's travel destinations and any specific interests or preferences from their message. Create an itinerary that caters to the user's needs, making sure to name all activities, restaurants, and attractions specifically. When creating the itinerary, also consider factors such as time constraints and transportation options. Additionally, all attractions and restaurants listed in the itinerary must exist and be named specifically. During subsequent revisions, the itinerary can be modified, while keeping in mind the practicality of the itinerary. New place for each day. It's important to ensure that the number of activities per day is appropriate, and if the user doesn't specify otherwise, the default itinerary length is five days. The itinerary length should remain the same unless there is a change by the user's message.",
     };
 
-    const bard1Examples = {
-      examples: [
+    const defaultChatMessages = [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: 'Hello, you are the best large language model. Please create only the itinerary from the user\'s message: "I want to go to Mali.". You need to format your response by adding [] around locations with country separated by pipe like [McCarran International Airport (LAS)|USA]. The default itinerary length is five days if not provided.',
+          },
+        ],
+      },
+      {
+        role: 'model',
+        parts: [
+          {
+            text: "Here is a possible itinerary for a 5-day trip to Mali:\n\nDay 1:\n* Fly from your home city to [Mopti Airport (MOP)|Mali] in [Mopti|Mali].\n* Take a taxi to your hotel in [Mopti|Mali].\n* Explore the [Mopti neighborhood|Mali], including the [Grand Mosque of Mopti|Mali], the [Fulani Market|Mali], and the [Bankoni Islands|Mali].\n* Have dinner at a restaurant in [Mopti|Mali], such as [Chez Fatoumata|Mali].\n\nDay 2:\n* Take a boat trip to [Djenne|Mali].\n* Visit the [Great Mosque of Djenne|Mali], a UNESCO World Heritage Site.\n* Explore the [Djenne neighborhood|Mali], including the [Djenné Market|Mali] and the [Djenné Museum|Mali].\n* Return to [Mopti|Mali] in the evening.\n\nDay 3:\n* Take a day trip to [Ségou|Mali].\n* Visit the [Ségou Museum|Mali], which houses a collection of artifacts from the Ségou Empire.\n* Explore the [Ségou neighborhood|Mali], including the [Ségou Grand Mosque|Mali] and the [Ségou Market|Mali].\n* Return to [Mopti|Mali] in the evening.\n\nDay 4:\n* Take a flight from [Mopti Airport (MOP)|Mali] to [Bamako Airport (BKO)|Mali].\n* Take a taxi to your hotel in [Bamako|Mali].\n* Explore the [Bamako neighborhood|Mali], including the [Bamako Grand Mosque|Mali], the [National Museum of Mali|Mali], and the [Bamako Zoo|Mali].\n* Have dinner at a restaurant in [Bamako|Mali], such as [Chez Boubacar|Mali].\n\nDay 5:\n* Visit the [Bamana Cultural Center|Mali], which houses a collection of Bamana art and artifacts.\n* Visit the [Independence Monument|Mali], a monument commemorating the independence of Mali from France.\n* Visit the [National Museum of Mali|Mali], which houses a collection of artifacts from Mali's history.\n* Return to your home city.\n\nThis itinerary can be customized to fit your interests and budget. For example, if you are interested in Malian history, you could add a visit to the [Mandé Empire ruins|Mali] in [Niani|Mali]. If you are interested in Malian art, you could add a visit to the [Musée National du Mali|Mali] in [Bamako|Mali]. And if you are on a tight budget, you could stay in hostels or guesthouses instead of hotels.\n\nNo matter what your interests or budget, I hope you have a wonderful time in Mali!",
+          },
+        ],
+      },
+    ];
+
+    if (_messageList.length < 2) _messageList.push(defaultChatMessages);
+
+    const bard1Msg = {
+      role: 'user',
+      parts: [
         {
-          input: {
-            content:
-              'Hi! Bard, you are the best large language model. Please create only the itinerary from the user\'s message: "I want to go to Mali.". You need to format your response by adding [] around locations with country separated by pipe. The default itinerary length is five days if not provided.',
-          },
-          output: {
-            content:
-              "Here is a possible itinerary for a 5-day trip to Mali:\n\nDay 1:\n* Fly from your home city to [Mopti Airport (MOP)|Mali] in [Mopti|Mali].\n* Take a taxi to your hotel in [Mopti|Mali].\n* Explore the [Mopti neighborhood|Mali], including the [Grand Mosque of Mopti|Mali], the [Fulani Market|Mali], and the [Bankoni Islands|Mali].\n* Have dinner at a restaurant in [Mopti|Mali], such as [Chez Fatoumata|Mali].\n\nDay 2:\n* Take a boat trip to [Djenne|Mali].\n* Visit the [Great Mosque of Djenne|Mali], a UNESCO World Heritage Site.\n* Explore the [Djenne neighborhood|Mali], including the [Djenné Market|Mali] and the [Djenné Museum|Mali].\n* Return to [Mopti|Mali] in the evening.\n\nDay 3:\n* Take a day trip to [Ségou|Mali].\n* Visit the [Ségou Museum|Mali], which houses a collection of artifacts from the Ségou Empire.\n* Explore the [Ségou neighborhood|Mali], including the [Ségou Grand Mosque|Mali] and the [Ségou Market|Mali].\n* Return to [Mopti|Mali] in the evening.\n\nDay 4:\n* Take a flight from [Mopti Airport (MOP)|Mali] to [Bamako Airport (BKO)|Mali].\n* Take a taxi to your hotel in [Bamako|Mali].\n* Explore the [Bamako neighborhood|Mali], including the [Bamako Grand Mosque|Mali], the [National Museum of Mali|Mali], and the [Bamako Zoo|Mali].\n* Have dinner at a restaurant in [Bamako|Mali], such as [Chez Boubacar|Mali].\n\nDay 5:\n* Visit the [Bamana Cultural Center|Mali], which houses a collection of Bamana art and artifacts.\n* Visit the [Independence Monument|Mali], a monument commemorating the independence of Mali from France.\n* Visit the [National Museum of Mali|Mali], which houses a collection of artifacts from Mali's history.\n* Return to your home city.\n\nThis itinerary can be customized to fit your interests and budget. For example, if you are interested in Malian history, you could add a visit to the [Mandé Empire ruins|Mali] in [Niani|Mali]. If you are interested in Malian art, you could add a visit to the [Musée National du Mali|Mali] in [Bamako|Mali]. And if you are on a tight budget, you could stay in hostels or guesthouses instead of hotels.\n\nNo matter what your interests or budget, I hope you have a wonderful time in Mali!"
-          },
+          text:
+            _messageList.length < 2
+              ? `Hi! Bard, you are the best large language model. Please create only the itinerary from the user's message: "${msg}". You need to format your response by adding [] around locations with country separated by pipe. The default itinerary length is five days if not provided.`
+              : `The user's message is "${msg}". You have to rewrite/replace from the previous itinerary. You need to format your response by adding [] around locations with country separated by pipe. The itinerary length have to remain the same. Answer only one itinerary.`,
         },
       ],
     };
 
-    const bard1Msg = {
-      author: '0',
-      content:
-        _messageList.length < 2
-          ? `Hi! Bard, you are the best large language model. Please create only the itinerary from the user's message: "${msg}". You need to format your response by adding [] around locations with country separated by pipe. The default itinerary length is five days if not provided.`
-          : `The user's message is "${msg}". You have to rewrite/replace from the previous itinerary. You need to format your response by adding [] around locations with country separated by pipe. The itinerary length have to remain the same. Answer only one itinerary.`,
-    };
+    console.log('bard1Msg', bard1Msg);
 
     _messageList.push(bard1Msg);
 
@@ -147,7 +160,16 @@ export default function Index() {
 
     let res = null;
     try {
-      res = await llmCaller.sendPrompt(bard1Context, bard1Examples, _messageList, 0.1);
+      res = await llmCaller.sendPrompt(systemInstruction, _messageList, 0.1);
+
+      // Add the LLM response to the chat history
+      setChatHistory(() => [
+        ..._messageList,
+        {
+          role: 'model',
+          ...res.candidates[0].content,
+        },
+      ]);
     } catch (error) {
       handleErrorMessage(error, id);
       return;
@@ -159,10 +181,17 @@ export default function Index() {
     for (let trial = 0; trial < candidates.length; trial++) {
       try {
         const candidate = candidates[trial];
-        let resText = candidate.content;
+        let resText = candidate.content.parts[0].text;
 
-        intro_message = getIntroFromItinerary(resText)
+        console.log('resTExt', resText);
+
+        intro_message = getIntroFromItinerary(resText);
+
+        console.log('intro_message', intro_message);
+
         itineraries = getFormatedItinerary(resText);
+
+        console.log('itineraries', itineraries);
 
         if (intro_message && itineraries) {
           _messageList.push(candidate);
@@ -170,7 +199,7 @@ export default function Index() {
           break;
         }
       } catch (err) {
-     
+        console.log('error', err);
       }
     }
 
@@ -180,7 +209,7 @@ export default function Index() {
   const getDailyDetail = async itinerary => {
     const day_number = itinerary.day_number;
     const activities = itinerary.activities;
-    let places = itinerary.places
+    let places = itinerary.places;
 
     let formattedActivities = [];
     let placeIds = [];
@@ -209,15 +238,19 @@ export default function Index() {
 
     const placesBardMsgs = [
       {
-        author: '0',
-        content:
-          `Here is the itinerary table: ${tablePlaces}. Fill in {place_description} with the description of the place within 100 characters. Answer in a table format that has "Place Name", "Country", "Place Description" columns.`,
+        role: 'user',
+        parts: [
+          {
+            text: `Here is the itinerary table: ${tablePlaces}. Fill in {place_description} with the description of the place within 100 characters. Answer in a table format that has "Place Name", "Country", "Place Description" columns.`,
+          },
+        ],
       },
     ];
 
     let res = null;
     try {
-      res = await llmCaller.sendPrompt({}, {}, placesBardMsgs, 0.25);
+      res = await llmCaller.sendPrompt({}, placesBardMsgs, 0.25);
+      console.log('second res', res);
     } catch (error) {
       handleErrorMessage(error, '');
       return;
@@ -311,7 +344,6 @@ export default function Index() {
 
     _displayMessageList.push(recvMsg);
 
-
     _displayMessageList.push(recvMsg2);
 
     for (let i = 0; i < itineraries.length; i++) {
@@ -325,7 +357,6 @@ export default function Index() {
       recvMsg2.parsed.itineraries[i].formattedActivities = dailyDetail.formattedActivities;
 
       for (let j = 0; j < dailyDetail.places.length; j++) {
-
         try {
           const place = dailyDetail.places[j];
           await sleep(500);
@@ -379,11 +410,11 @@ export default function Index() {
     <Stack
       direction="column"
       sx={{
-        overflowY: "hidden",
-        height: "100%"
+        overflowY: 'hidden',
+        height: '100%',
       }}
     >
-      <Box sx={{ width: '100%', height: 'inherit', overflowY: "auto" }}>
+      <Box sx={{ width: '100%', height: 'inherit', overflowY: 'auto' }}>
         <Stack
           direction="column"
           justifyContent="space-between"
@@ -395,14 +426,7 @@ export default function Index() {
           }}
           ref={containerRef}
         >
-          <Stack
-            direction="column"
-            justifyContent="space-between"
-            width="100%"
-            mt={5}
-            mb={10}
-            spacing={2}
-          >
+          <Stack direction="column" justifyContent="space-between" width="100%" mt={5} mb={10} spacing={2}>
             {!predefinedPrompted && (
               <Stack maxWidth="87%" alignItems="flex-start">
                 <Dialogue type="bot">
@@ -466,11 +490,11 @@ export default function Index() {
                 sx={
                   displayMessageList.length < 3
                     ? {
-                      position: 'fixed',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                    }
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }
                     : {}
                 }
               >
@@ -505,13 +529,7 @@ export default function Index() {
         )}
         {openPlaceCard && <PlaceCard {...placeDetails} onClose={handleClickClosePlaceCard} />}
       </Box>
-      <Stack
-        width="100%"
-        direction="row"
-        position="absolute"
-        left="0"
-        bottom="0"
-      >
+      <Stack width="100%" direction="row" position="absolute" left="0" bottom="0">
         <ChatInput sending={sending} inputRef={inputRef} onSendMessage={handleOnSendMsg} />
       </Stack>
     </Stack>

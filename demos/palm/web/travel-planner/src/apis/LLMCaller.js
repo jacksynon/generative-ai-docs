@@ -16,37 +16,48 @@
 
 export default class LLMCaller {
   constructor() {
-    this.apiKey = import.meta.env.VITE_GOOGLE_GENERATIVE_LANGUAGE_API_KEY
+    this.apiKey = import.meta.env.VITE_GOOGLE_GENERATIVE_LANGUAGE_API_KEY;
     this.baseUrl = 'https://generativelanguage.googleapis.com';
   }
 
-  async sendPrompt(context, examples, messages, temperature = 0) {
-    return new Promise(async(resolve, reject)=> {
-
+  async sendPrompt(context = {}, messages, temperature = 0) {
+    return new Promise(async (resolve, reject) => {
       const payload = {
-        prompt: {...context, ...examples, messages: messages},
-        temperature: temperature,
-        candidate_count: 3
+        contents: messages,
+        generationConfig: {
+          temperature: temperature,
+        },
+      };
+
+      // if context is not an empty object, add it to the payload
+      if (context && Object.keys(context).length > 0) {
+        payload.system_instruction = { parts: context };
       }
+
+      console.log(payload);
 
       try {
-        const response = await fetch(`${this.baseUrl}/v1beta2/models/chat-bison-001:generateMessage?key=${this.apiKey}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          method: 'POST',
-        });
-        if(response.status === 200) {
-          resolve((await response).json());
+        const response = await fetch(
+          `${this.baseUrl}/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${this.apiKey}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+            method: 'POST',
+          }
+        );
+        if (response.status === 200) {
+          const res = await response.json();
+          resolve(res);
+          console.log('worked', res);
         } else {
           const res = await response.json();
-          reject(res.error.message)
+          reject(res.error.message);
         }
       } catch (error) {
-        reject(error)
+        reject(error);
       }
-
-    })
+    });
   }
 }
